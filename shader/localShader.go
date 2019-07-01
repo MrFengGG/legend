@@ -31,6 +31,10 @@ func (shader *LocalShader) SetFloat(name string, value float32){
 	gl.Uniform1f(gl.GetUniformLocation(shader.ID, gl.Str(name + "\x00")), value)
 }
 
+func (shader *LocalShader) SetMatrix4fv(name string, value *float32){
+	gl.UniformMatrix4fv(gl.GetUniformLocation(shader.ID, gl.Str(name + "\x00")), 1,false,value)
+}
+
 func NewLocalShader(vertexPath string, fragmentPath string) *LocalShader{
 	vertexString, err := ioutil.ReadFile(vertexPath)
 	if err != nil{
