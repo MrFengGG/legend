@@ -7,6 +7,7 @@ import(
     "legend/shader"
     "runtime"
     "legend/texture"
+    "legend/camera"
     "github.com/go-gl/mathgl/mgl32"
 )
 const (
@@ -62,10 +63,12 @@ var (
         mgl32.Mat3{2,5,-15}, 
         mgl32.Mat3{-1.5,-2.2,-2.5}, 
     }
-    cameraPos    = mgl32.Vec3{0.0, 0.0,  3.0}
-    cameraFront  = mgl32.Vec3{0.0, 0.0,  -1.0}
-    cameraUp     = mgl32.Vec3{0.0, 1.0,  0.0}
-    cameraSpeed float32 = 0.05 
+    deltaTime = float32(0.0);	// time between current frame and last frame
+    lastFrame = float32(0.0);
+    acamera = camera.NewDefaultCamera()
+    firstMouse = true
+    lastX = width / 2.0
+    lastY = height / 2.0
 )
 func main() {
     runtime.LockOSThread()
@@ -84,14 +87,18 @@ func main() {
     texture1.Use()
     texture2.Use()
 
-    projection := mgl32.Perspective(mgl32.DegToRad(45.0), float32(width)/height, 0.1, 100.0)
-    shader.SetMatrix4fv("projection",&projection[0])
+    projection := acamera.GetProjection(width,height)
+    shader.SetMatrix4fv("projection", projection)
     for !window.ShouldClose() {
+        currentFrame := float32(glfw.GetTime());
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+
         clear()
         texture1.Use()
         texture2.Use()
-        view := mgl32.LookAtV(cameraPos,cameraFront,cameraUp) 
-        shader.SetMatrix4fv("view",&view[0])
+        view := acamera.GetViewMatrix()
+        shader.SetMatrix4fv("view",view)
         for _, v := range position {
             model := mgl32.HomogRotate3DX(float32(glfw.GetTime())).Mul4(mgl32.HomogRotate3DY(float32(glfw.GetTime())))
             model = mgl32.Translate3D(v[0],v[1],v[2]).Mul4(model)
@@ -110,6 +117,7 @@ func initGlfw() *glfw.Window {
     }
     glfw.WindowHint(glfw.Resizable, glfw.False)
     window, err := glfw.CreateWindow(width, height, "test", nil, nil)
+    window.SetCursorPosCallback(mouse_callback)
     if err != nil {
             panic(err)
     }
@@ -153,11 +161,32 @@ func makeVao(points []float32,indices []uint32) uint32 {
 
 func processInput(window *glfw.Window){
     if(window.GetKey(glfw.KeyW) == glfw.Press){
-        cameraPos = cameraPos.Add( cameraFront.Mul(cameraSpeed))
+        acamera.ProcessKeyboard(camera.FORWARD,deltaTime)
     }
     if(window.GetKey(glfw.KeyS) == glfw.Press){
-        cameraPos = cameraPos.Sub( cameraFront.Mul(cameraSpeed))
+        acamera.ProcessKeyboard(camera.BACKWARD,deltaTime)
     }
+    if(window.GetKey(glfw.KeyA) == glfw.Press){
+        acamera.ProcessKeyboard(camera.LEFT,deltaTime)
+    }
+    if(window.GetKey(glfw.KeyD) == glfw.Press){
+        acamera.ProcessKeyboard(camera.RIGHT,deltaTime)
+    }
+}
+
+func mouse_callback(window *glfw.Window, xpos float64, ypos float64){
+    if(firstMouse){
+        lastX = xpos
+        lastY = ypos
+        firstMouse = false
+    }
+    xoffset := float32(xpos - lastX)
+    yoffset := float32(lastY - ypos) 
+
+    lastX = xpos
+    lastY = ypos
+
+    acamera.ProcessMouseMovement(xoffset, yoffset)
 }
 
 func draw(vao uint32) {

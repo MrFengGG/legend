@@ -66,6 +66,7 @@ func NewStringShader(vertexString string, fragmentString string) *LocalShader{
 	gl.DeleteShader(fragmentShader)
 	return &LocalShader{ ID: progID}
 }
+
 func compileShader(source string, shaderType uint32) (uint32, error) {
     shader := gl.CreateShader(shaderType)
     csources, free := gl.Strs(source)
